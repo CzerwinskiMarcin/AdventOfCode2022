@@ -6,6 +6,11 @@ module.exports = {
     entry: {
         index: './src/index.ts'
     },
+    watch: true,
+    watchOptions: {
+        aggregateTimeout: 300,
+        ignored: '**/node_modules'
+    },
     output: {
         filename: '[name].js',
         path: path.resolve(__dirname, 'dist'),

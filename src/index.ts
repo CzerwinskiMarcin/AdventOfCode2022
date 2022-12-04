@@ -12,7 +12,7 @@ yargs.command('solver', 'Solve AoC 2022', yargs => {
         .option('type', {
             alias: 't',
             default: 'example',
-            choices: ['puzzle', 'example'],
+            choices: ['puzzle', 'example', 'test'],
         })
         .demandOption('day', 'Please provide day of the puzzle to solve')
 }, argv => {
