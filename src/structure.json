@@ -1,0 +1,10 @@
+{
+  "inputFileSuffixes": ["puzzle", "example", "test"],
+  "inputFilePath": ["static"],
+  "solverDayMarker": "__DAY__",
+  "solverDirPath": ["solutions", "__DAY__"],
+  "solverFilePath": ["solutions", "__DAY__","index.ts"],
+  "solverGeneralExportPath": ["solutions", "index.ts"],
+  "solverTemplate": "export default function (input: string): { first: any, second: any } {\n\treturn {first: null, second: null};\n}\n",
+  "solverGeneralExport": "\nexport * as ___DAY__ from './__DAY__';"
+}
