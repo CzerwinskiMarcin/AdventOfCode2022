@@ -40,5 +40,6 @@ module.exports = {
         fallback: { "path": require.resolve("path-browserify")},
         extensions: ['.tsx', '.ts', '.js']
     },
-    target: 'node'
+    target: 'node',
+    devtool: 'source-map'
 }

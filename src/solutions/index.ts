@@ -7,3 +7,4 @@ export * as _6 from './6';
 export * as _7 from './7';
 export * as _8 from './8';
 export * as _9 from './9';
+export * as _10 from './10';
