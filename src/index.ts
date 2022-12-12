@@ -4,9 +4,25 @@ import * as fs from 'fs';
 import * as solvers from './solutions';
 import {getFileData} from './utils';
 import metaData from './structure.json';
+import * as Winston from "winston";
+
+const createLogger = (day: string): Winston.Logger => {
+    return Winston.createLogger({
+        level: 'info',
+        format: Winston.format.json(),
+        transports: [
+            new Winston.transports.File({filename: `${day}-errors.log`, level: 'error'}),
+            new Winston.transports.File({filename: `${day}-combined.log`}),
+        ]
+    });
+}
 
 const createInputFiles = (day: string, data: any): void => {
-    console.log('Preparing input files...')
+    const logger = createLogger(day);
+    logger.log({
+        level: 'info',
+        message: 'Preparing input files'
+    });
     const inputFilePath = path.join(__dirname, ...data.inputFilePath);
     const devInputFilePath = path.join(__dirname, '..', ...data.inputFilePath);
     data.inputFileSuffixes
@@ -15,24 +31,40 @@ const createInputFiles = (day: string, data: any): void => {
             const specificDevPuzzleInputFilePath = path.join(devInputFilePath, `${day}-${suffix}.txt`);
             try {
                 fs.readFileSync(specificPuzzleInputFilePath);
-                console.log(`Input file '${specificPuzzleInputFilePath}' already exists...`);
+                logger.log({
+                    level: 'info',
+                    message: `Input file '${specificPuzzleInputFilePath}' already exists...`
+                });
             } catch (e) {
-                console.log(`Input file '${specificPuzzleInputFilePath} doesn't exist. Creating....`);
+                logger.log({
+                    level: 'info',
+                    message: `Input file '${specificPuzzleInputFilePath} doesn't exist. Creating....`
+                });
                 fs.writeFileSync(specificPuzzleInputFilePath, '');
             }
 
             try {
                 fs.readFileSync(specificDevPuzzleInputFilePath);
-                console.log(`Input dev file '${specificDevPuzzleInputFilePath}' already exists...`);
+                logger.log({
+                    level: 'info',
+                    message: `Input dev file '${specificDevPuzzleInputFilePath}' already exists...`
+                });
             } catch (e) {
-                console.log(`Input dev file '${specificDevPuzzleInputFilePath} doesn't exist. Creating....`);
+                logger.log({
+                    level: 'info',
+                    message: `Input dev file '${specificDevPuzzleInputFilePath} doesn't exist. Creating....`
+                });
                 fs.writeFileSync(specificDevPuzzleInputFilePath, '');
             }
         });
 }
 
-const createSolver = (day: string | number, data: any): void => {
-    console.log('Preparing solver...');
+const createSolver = (day: string, data: any): void => {
+    const logger = createLogger(day);
+    logger.log({
+        level: 'info',
+        message: 'Preparing solver...'
+    });
     const solverDirPath = path.join(__dirname, '..', 'src', ...data.solverDirPath).replace(data.solverDayMarker, `${day}`);
     const solverFilePath = path.join(__dirname, '..', 'src', ...data.solverFilePath).replace(data.solverDayMarker, `${day}`);
     const generalFilePath = path.join(__dirname, '..', 'src', ...data.solverGeneralExportPath).replace(data.solverDayMarker, `${day}`);
@@ -40,7 +72,10 @@ const createSolver = (day: string | number, data: any): void => {
     console.log(solverDirPath, solverFilePath, generalFilePath);
 
     if (!fs.existsSync(solverDirPath)) {
-        console.log('Adding new solver for day %d...', day);
+        logger.log({
+            level: 'info',
+            message: `Adding new solver for day ${day}...`
+        });
         fs.mkdirSync(solverDirPath);
         fs.writeFileSync(solverFilePath, data.solverTemplate);
         fs.appendFileSync(generalFilePath, data.solverGeneralExport.replace(new RegExp(data.solverDayMarker, 'gm'), day));
@@ -62,7 +97,8 @@ yargs.command('solver', 'Solve AoC 2022', yargs => {
 }, argv => {
     const {day, type} = argv;
     const input = getFileData(path.resolve(__dirname, 'static', `${day}-${type}.txt`));
-    console.log(solvers[`_${day}`].default(input));
+    const logger = createLogger(`${day}`);
+    console.log(solvers[`_${day}`].default(input, logger));
 })
     .command('preparer', 'Prepare structure for the puzzle', yargs => {
             yargs.option('day', {
@@ -73,8 +109,8 @@ yargs.command('solver', 'Solve AoC 2022', yargs => {
         },
         argv => {
             createInputFiles(argv.d as string, metaData);
-            console.log('=====================================');
             createSolver(argv.d as string, metaData);
         })
     .help()
     .argv
+
