@@ -11,8 +11,8 @@ const createLogger = (day: string): Winston.Logger => {
         level: 'info',
         format: Winston.format.json(),
         transports: [
-            new Winston.transports.File({filename: `${day}-errors.log`, level: 'error'}),
-            new Winston.transports.File({filename: `${day}-combined.log`}),
+            new Winston.transports.File({filename: `errors.log`, level: 'error'}),
+            new Winston.transports.File({filename: `combined.log`}),
         ]
     });
 }
