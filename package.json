@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npx webpack --config webpack.config.js"
+    "build": "npx webpack --config webpack.config.js",
+    "prepare": "node ./dist/index.js preparer",
+    "solve": "node ./dist/index.js solver"
   },
   "repository": {
     "type": "git",
