@@ -1,0 +1,1 @@
+export {Coordinate} from './coordinate.interface';
