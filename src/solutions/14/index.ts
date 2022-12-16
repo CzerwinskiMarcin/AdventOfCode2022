@@ -3,12 +3,14 @@ import {stringToArray} from "../../utils";
 import {CommandOptions} from "webpack-cli/lib/types";
 
 export default function (input: string): { first: any, second: any } {
-    const mapManager = new MapManager(input, new BaseInputMapConverter());
+    const mapManager = new MapManager(input, new BaseInputMapConverter([500, 1]));
     mapManager.simulateSandFlow(false);
+    // mapManager.printMap();
 	return {first: mapManager.sandQuantity, second: null};
 }
 
 interface InputConverter {
+    get sandOrigin(): Coordinate;
     convert: (input: string) => Tile[][];
 }
 
@@ -29,6 +31,15 @@ interface Moveable {
 }
 
 class BaseInputMapConverter implements InputConverter {
+    _sandOrigin: Coordinate;
+
+    constructor(private offset: Coordinate = [0, 0]) {
+    }
+
+    get sandOrigin(): Coordinate {
+        return this._sandOrigin;
+    }
+
     convert(input: string, sandOrigin: Coordinate = [500, 0]): Tile[][] {
         return this.fillMap(input, sandOrigin)
     }
@@ -88,16 +99,25 @@ class BaseInputMapConverter implements InputConverter {
         const tiles: Tile[][] = [];
         for (let y = 0; y <= rocksRange.diff[1]; y++) {
             tiles.push([]);
-            for (let x = 0; x <= rocksRange.diff[0]; x++) {
+            for (let x = 0; x <= rocksRange.diff[0] + this.offset[0]; x++) {
                 tiles[y][x] = {coordinate: [x, y], type: TileType.AIR};
             }
         }
 
+        for (let i = 0; i < Math.abs(this.offset[1]); i++) {
+            const row = [];
+            for (let x = 0; x < tiles[0].length; x++) {
+                row.push({coordinate: [tiles.length, x], type: TileType.AIR});
+            }
+            tiles.push([...row]);
+        }
+
         rocks.forEach(([x, y]) => {
-            tiles[y][x - rocksRange.min[0]].type = TileType.ROCK;
+            tiles[y][x - rocksRange.min[0] + Math.floor(this.offset[0]/2)].type = TileType.ROCK;
         });
 
-        tiles[sandOrigin[1]][sandOrigin[0] - rocksRange.min[0]].type = TileType.SAND_SOURCE;
+        this._sandOrigin = [sandOrigin[0] - rocksRange.min[0] + Math.floor(this.offset[0]/2), sandOrigin[1]];
+        tiles[sandOrigin[1]][sandOrigin[0] - rocksRange.min[0] + Math.floor(this.offset[0]/2)].type = TileType.SAND_SOURCE;
         return tiles;
     }
 }
@@ -106,12 +126,14 @@ class MapManager {
     private sands: Sand[] = [];
     private sandMap: (Sand | null)[][] = [];
     private map: Tile[][];
+    private sandOrigin: Coordinate;
     private width: number;
     private height: number;
 
     constructor(private input: string, private converter: InputConverter) {
         this.initMap();
         this.initSandMap();
+        this.sandOrigin = converter.sandOrigin;
         this.printMap();
     }
 
@@ -132,6 +154,11 @@ class MapManager {
         while (!sandFallingOut) {
             if (printMapOnEachSand) console.log(`\nSand number: ${iteration + 1}`);
             const newSand = this.flowSand(this.generateSand());
+            if (newSand.coordinate[0] === this.sandOrigin[0] && newSand.coordinate[1] === this.sandOrigin[1]) {
+                this.sands.push(newSand);
+                sandFallingOut = true;
+                continue;
+            }
             if (!newSand) {
                 sandFallingOut = true;
                 continue;
@@ -140,43 +167,30 @@ class MapManager {
             this.putSandOnMap(newSand);
             if (printMapOnEachSand) {
                 this.printMap();
-                console.log('\n===============\n')
                 iteration++;
             }
         }
     }
 
     printMap(): void {
-        console.log(this.map.map(row => {
-            return row.map(tile => {
-                const sandMapTile = this.sandMap[tile.coordinate[1]][tile.coordinate[0]];
-                const sign = !!sandMapTile ? TileType.SAND : tile.type;
-                return `${sign} `;
-            }).join('');
+        console.log(this.map.map((row, y) => {
+            const sand = this.sandMap[y].map(s => !!s ? 'o' : null);
+            const others = this.map[y].map(t => t.type);
+            return sand.map((s, x) => !!s ? s : others[x]);
         }).join('\n'));
     }
 
     private initSandMap(): void {
-        const height = this.map.length;
-        const width = this.map[0].length;
-        for (let y = 0; y < height; y++) {
+        for (let y = 0; y < this.height; y++) {
             this.sandMap.push([]);
-            for (let x = 0; x < width; x++) {
+            for (let x = 0; x < this.width; x++) {
                 this.sandMap[y].push(null);
             }
         }
     }
 
     private generateSand(): Sand {
-        let sandSource;
-        try {
-            sandSource = this.map
-                .filter(row => row.find(({type}) => type === TileType.SAND_SOURCE))[0]
-                .find(({type}) => type === TileType.SAND_SOURCE);
-        } catch (e) {
-            throw new Error('No Sand Origin')
-        }
-        return new Sand(sandSource.coordinate, new SandMoveStrategy());
+        return new Sand(this.sandOrigin, new SandMoveStrategy());
     }
 
     private putSandOnMap(sand: Sand): void {
@@ -187,7 +201,6 @@ class MapManager {
     private flowSand(sand: Sand): Sand | null {
         while(sand.isMoving) {
             const nextMovement = sand.getPossibleMovements().find((newPosition) => this.isTitlePassable(newPosition));
-
             if (!nextMovement) {
                 sand.isMoving = false;
                 continue;
@@ -203,6 +216,7 @@ class MapManager {
     }
 
     private isTitlePassable([x, y]: Coordinate): boolean {
+        if (y >= this.height) return false
         if (x >= this.width || y >= this.height || y < 0 || x < 0) return true;
         const isRockTile = this.map[y][x].type === TileType.ROCK;
         const hasSand = !!this.sandMap[y][x];
