@@ -34,6 +34,7 @@
     "yargs": "^17.6.2"
   },
   "dependencies": {
+    "chalk": "^5.2.0",
     "winston": "^3.8.2"
   }
 }
